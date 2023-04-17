@@ -35,6 +35,7 @@ class RoiDataset(Dataset):
         im_info = torch.FloatTensor([im_data.size[0], im_data.size[1]])
 
         if self.train:
+            # 图像增强
             im_data, boxes, gt_classes = augment_img(im_data, boxes, gt_classes)
 
             w, h = im_data.size[0], im_data.size[1]
@@ -42,13 +43,18 @@ class RoiDataset(Dataset):
             boxes[:, 1::2] = np.clip(boxes[:, 1::2] / h, 0.001, 0.999)
 
             # resize image
+            # 图像缩放
             input_h, input_w = cfg.input_size
             im_data = im_data.resize((input_w, input_h))
+            # 数据预处理
             im_data_resize = torch.from_numpy(np.array(im_data)).float() / 255
+            # [H, W, C] -> [C, H, W]
             im_data_resize = im_data_resize.permute(2, 0, 1)
+
             boxes = torch.from_numpy(boxes)
             gt_classes = torch.from_numpy(gt_classes)
             num_obj = torch.Tensor([boxes.size(0)]).long()
+            # 图像数据 / 边界框数据 / 类别下标 / 边界框个数
             return im_data_resize, boxes, gt_classes, num_obj
 
         else:
@@ -69,6 +75,8 @@ class RoiDataset(Dataset):
 
 def detection_collate(batch):
     """
+    批数据整理, 当前每幅图像包含了不同数量的标注框数据. 重新整理数据, 保证输出数据中每幅图像拥有相同数目的标注框数据
+    实现: 首先找出该批次图像中最多的标注框数目, 然后其他图像的标注框数据创建相同大小, 不存在的标注框数据置0
     Collate data of different batch, it is because the boxes and gt_classes have changeable length.
     This function will pad the boxes and gt_classes with zero.
 
@@ -94,7 +102,9 @@ def detection_collate(batch):
     # individual list
     bsize = len(batch)
     im_data, boxes, gt_classes, num_obj = zip(*batch)
+    # 这一批数据中标注框最多的图像所拥有的标注框个数
     max_num_obj = max([x.item() for x in num_obj])
+    # 基于这个进行标注框注册, 保证所有图像数据拥有相同的标注框个数
     padded_boxes = torch.zeros((bsize, max_num_obj, 4))
     padded_classes = torch.zeros((bsize, max_num_obj,))
 
@@ -111,8 +121,14 @@ class TinyRoiDataset(RoiDataset):
         self._roidb = self._roidb[:num_roi]
 
 
+if __name__ == '__main__':
+    from pascal_voc import pascal_voc
 
+    dataset = pascal_voc('train', '2012')
+    print(dataset)
 
+    db = RoiDataset(dataset)
+    print(db)
 
-
-
+    data = db.__getitem__(100)
+    print(data)

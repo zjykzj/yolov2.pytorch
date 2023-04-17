@@ -42,38 +42,58 @@ def build_target(output, gt_data, H, W):
     class_mask -- tensor of shape (B, H * W * num_anchors, 1)
 
     """
+    # [N, H*W*Num_anchors, 4]: sigmoid(t_x) / sigmoid(t_y) / e^t_w / e^t_h
     delta_pred_batch = output[0]
+    # [N, H*W*Num_anchors, 1]: 预测框置信度
     conf_pred_batch = output[1]
+    # [N, H*W*Num_anchors, Num_classes]: 分类输出
     class_score_batch = output[2]
 
+    # [N, Num_objs, 4], Num_objs: 该批次数据中某一幅图像拥有的最多的标注框个数
+    # 标注框坐标, 相对于图像大小
     gt_boxes_batch = gt_data[0]
+    # [N, Num_objs]
+    # 标注框对应类别下标
     gt_classes_batch = gt_data[1]
+    # 每幅图像的标注框数目
     num_boxes_batch = gt_data[2]
 
+    # [N] 批量大小
     bsize = delta_pred_batch.size(0)
-
+    # [Num_anchors] 锚点框个数
     num_anchors = 5  # hard code for now
 
     # initial the output tensor
     # we use `tensor.new()` to make the created tensor has the same devices and data type as input tensor's
     # what tensor is used doesn't matter
+    #
+    # 这个应该是说置信度的
+    # iou_target: [N, H*W, Num_anchors, 1]
     iou_target = delta_pred_batch.new_zeros((bsize, H * W, num_anchors, 1))
+    # iou_mask: [N, H*W, Num_anchors, 1]
     iou_mask = delta_pred_batch.new_ones((bsize, H * W, num_anchors, 1)) * cfg.noobject_scale
 
+    # target和mask, 看起来target用于损失计算的真值, mask用于判断哪些预测框用于损失计算
+    # [N, H*W, Num_anchors, 4]
     box_target = delta_pred_batch.new_zeros((bsize, H * W, num_anchors, 4))
+    # [N, H*W, Num_anchors, 1]
     box_mask = delta_pred_batch.new_zeros((bsize, H * W, num_anchors, 1))
 
+    # [N, H*W, Num_anchors, 1]
     class_target = conf_pred_batch.new_zeros((bsize, H * W, num_anchors, 1))
+    # [N, H*W, Num_anchors, 1]
     class_mask = conf_pred_batch.new_zeros((bsize, H * W, num_anchors, 1))
 
     # get all the anchors
-
+    # [5, 2] 锚点框
     anchors = torch.FloatTensor(cfg.anchors)
 
     # note: the all anchors' xywh scale is normalized by the grid width and height, i.e. 13 x 13
     # this is very crucial because the predict output is normalized to 0~1, which is also
     # normalized by the grid width and height
-    all_grid_xywh = generate_all_anchors(anchors, H, W) # shape: (H * W * num_anchors, 4), format: (x, y, w, h)
+    #
+    # 生成网格锚点框
+    all_grid_xywh = generate_all_anchors(anchors, H, W)  # shape: (H * W * num_anchors, 4), format: (x, y, w, h)
     all_grid_xywh = delta_pred_batch.new(*all_grid_xywh.size()).copy_(all_grid_xywh)
     all_anchors_xywh = all_grid_xywh.clone()
     all_anchors_xywh[:, 0:2] += 0.5
@@ -93,7 +113,6 @@ def build_target(output, gt_data, H, W):
         gt_boxes[:, 0::2] *= W
         gt_boxes[:, 1::2] *= H
 
-
         # step 1: process IoU target
 
         # apply delta_pred to pre-defined anchors
@@ -102,9 +121,9 @@ def build_target(output, gt_data, H, W):
         box_pred = xywh2xxyy(box_pred)
 
         # for each anchor, its iou target is corresponded to the max iou with any gt boxes
-        ious = box_ious(box_pred, gt_boxes) # shape: (H * W * num_anchors, num_obj)
+        ious = box_ious(box_pred, gt_boxes)  # shape: (H * W * num_anchors, num_obj)
         ious = ious.view(-1, num_anchors, num_obj)
-        max_iou, _ = torch.max(ious, dim=-1, keepdim=True) # shape: (H * W, num_anchors, 1)
+        max_iou, _ = torch.max(ious, dim=-1, keepdim=True)  # shape: (H * W, num_anchors, 1)
         if cfg.debug:
             print('ious', ious)
 
@@ -159,11 +178,11 @@ def build_target(output, gt_data, H, W):
             iou_mask[b, cell_idx, argmax_anchor_idx, :] = cfg.object_scale
 
     return iou_target.view(bsize, -1, 1), \
-           iou_mask.view(bsize, -1, 1), \
-           box_target.view(bsize, -1, 4),\
-           box_mask.view(bsize, -1, 1), \
-           class_target.view(bsize, -1, 1).long(), \
-           class_mask.view(bsize, -1, 1)
+        iou_mask.view(bsize, -1, 1), \
+        box_target.view(bsize, -1, 4), \
+        box_mask.view(bsize, -1, 1), \
+        class_target.view(bsize, -1, 1).long(), \
+        class_mask.view(bsize, -1, 1)
 
 
 def yolo_loss(output, target):
@@ -215,47 +234,9 @@ def yolo_loss(output, target):
     #     print(class_target_keep)
 
     # calculate the loss, normalized by batch size.
-    box_loss = 1 / b * cfg.coord_scale * F.mse_loss(delta_pred_batch * box_mask, box_target * box_mask, reduction='sum') / 2.0
+    box_loss = 1 / b * cfg.coord_scale * F.mse_loss(delta_pred_batch * box_mask, box_target * box_mask,
+                                                    reduction='sum') / 2.0
     iou_loss = 1 / b * F.mse_loss(conf_pred_batch * iou_mask, iou_target * iou_mask, reduction='sum') / 2.0
     class_loss = 1 / b * cfg.class_scale * F.cross_entropy(class_score_batch_keep, class_target_keep, reduction='sum')
 
     return box_loss, iou_loss, class_loss
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -161,6 +161,8 @@ def box_transform_inv(box, deltas):
 
 def generate_all_anchors(anchors, H, W):
     """
+    生成锚点框列表, 每个网格5个锚点框:
+    [H, W] -> [H, W, Num_anchors, 4] -> [H*W*Num_anchors, 4]
     Generate dense anchors given grid defined by (H,W)
 
     Arguments:
@@ -173,35 +175,43 @@ def generate_all_anchors(anchors, H, W):
     """
 
     # number of anchors per cell
+    # 锚点框个数, YOLOv2使用5个锚点框
     A = anchors.size(0)
 
     # number of cells
+    # 网格数目
     K = H * W
-
+    # 网格左上角坐标
+    # shift_x: [W, H] shift_x[0] = [0, 0, 0, ....]
+    # shift_y: [W, H] shift_y[0] = [0, 1, 2, ...., H]
     shift_x, shift_y = torch.meshgrid([torch.arange(0, W), torch.arange(0, H)])
 
     # transpose shift_x and shift_y because we want our anchors to be organized in H x W order
+    # [W, H] -> [H, W]
+    # shift_x[0] = [0, 1, 2, ..., W]
     shift_x = shift_x.t().contiguous()
+    # [W, H] -> [H, W]
+    # shift_y[0] = [0, 0, 0, ...]
     shift_y = shift_y.t().contiguous()
 
     # shift_x is a long tensor, c_x is a float tensor
     c_x = shift_x.float()
     c_y = shift_y.float()
 
+    # 每个锚点框的中心点坐标位于网格左上角
+    # c_x: [H, W] -> [H*W, 1]
+    # c_y: [H, W] -> [H*W, 1]
+    # centers: [H*W, 2]
     centers = torch.cat([c_x.view(-1, 1), c_y.view(-1, 1)], dim=-1)  # tensor of shape (h * w, 2), (cx, cy)
 
     # add anchors width and height to centers
+    # centers: [H*W, 2] -> [H*W, 1, 2] -> [H*W, A, 2]
+    # anchors: [A, 2] -> [1, A, 2] -> [H*W, A, 2]
+    # all_anchors: [H*W, A, 4]
     all_anchors = torch.cat([centers.view(K, 1, 2).expand(K, A, 2),
                              anchors.view(1, A, 2).expand(K, A, 2)], dim=-1)
 
+    # [H*W, A, 4] -> [H*W*A, 4]
     all_anchors = all_anchors.view(-1, 4)
 
     return all_anchors
-
-
-
-
-
-
-
-

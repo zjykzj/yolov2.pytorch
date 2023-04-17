@@ -39,7 +39,6 @@ class imdb(object):
     def num_classes(self):
         return len(self._classes)
 
-
     @property
     def roidb_handler(self):
         return self._roidb_handler
@@ -47,7 +46,6 @@ class imdb(object):
     @roidb_handler.setter
     def roidb_handler(self, val):
         self._roidb_handler = val
-
 
     @property
     def roidb(self):
@@ -58,7 +56,6 @@ class imdb(object):
 
     def default_roidb(self):
         raise NotImplementedError
-
 
     @property
     def num_images(self):
@@ -84,15 +81,3 @@ class imdb(object):
         if not osp.exists(cache_path):
             os.makedirs(cache_path)
         return cache_path
-
-
-
-
-
-
-
-
-
-
-
-

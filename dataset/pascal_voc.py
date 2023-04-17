@@ -14,9 +14,11 @@ import numpy as np
 import scipy.sparse
 import uuid
 import xml.etree.ElementTree as ET
-from .voc_eval import voc_eval
 
+from .voc_eval import voc_eval
 from .imdb import imdb, data_dir
+# from voc_eval import voc_eval
+# from imdb import imdb, data_dir
 
 
 class pascal_voc(imdb):
@@ -77,7 +79,8 @@ class pascal_voc(imdb):
         """
         Return the default path where PASCAL VOC is expected to be installed.
         """
-        return os.path.join(data_dir, 'VOCdevkit' + self._year)
+        # return os.path.join(data_dir, 'VOCdevkit' + self._year)
+        return os.path.join(data_dir, 'VOCdevkit')
 
     def _load_image_set_index(self):
         """
@@ -105,6 +108,7 @@ class pascal_voc(imdb):
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
+        # 得到每张图像的标注信息, 包括标注框和对应类别下标
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
         with open(cache_file, 'wb') as fid:
@@ -115,6 +119,7 @@ class pascal_voc(imdb):
 
     def _load_pascal_annotation(self, index):
         """
+        获取标注信息, 包括标注框和对应类别下标
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
@@ -239,5 +244,8 @@ class pascal_voc(imdb):
                 os.remove(filename)
 
 
+if __name__ == '__main__':
+    dataset = pascal_voc('train', '2012')
+    print(dataset)
 
 

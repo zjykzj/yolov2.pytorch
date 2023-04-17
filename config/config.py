@@ -25,7 +25,6 @@ decay_lrs = {
 momentum = 0.9
 weight_decay = 0.0005
 
-
 # multi-scale training:
 # {k: epoch, v: scale range}
 multi_scale = True
@@ -36,7 +35,7 @@ scale_step = 40
 scale_range = (3, 4)
 
 epoch_scale = {
-    1:  (3, 4),
+    1: (3, 4),
     15: (2, 5),
     30: (1, 6),
     60: (0, 7),
@@ -61,3 +60,6 @@ strides = 32
 
 debug = False
 
+if __name__ == '__main__':
+    print(anchors)
+    print(len(anchors), len(anchors[0]))
