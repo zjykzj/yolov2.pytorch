@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import os
 import numpy as np
 import argparse
@@ -71,7 +70,6 @@ def get_dataset(datasetnames):
 
 
 def train():
-
     # define the hyper parameters first
     args = parse_args()
     args.lr = cfg.lr
@@ -103,7 +101,7 @@ def train():
 
     elif args.dataset == 'voc0712trainval':
         args.imdb_name = 'voc_2007_trainval+voc_2012_trainval'
-        args.imdbval_name ='voc_2007_test'
+        args.imdbval_name = 'voc_2007_test'
     else:
         raise NotImplementedError
 
@@ -127,7 +125,7 @@ def train():
     tic = time.time()
     model = Yolov2(weights_file=args.pretrained_model)
     toc = time.time()
-    print('model loaded: cost time {:.2f}s'.format(toc-tic))
+    print('model loaded: cost time {:.2f}s'.format(toc - tic))
 
     # initialize the optimizer
     optimizer = optim.SGD(model.parameters(), lr=args.lr,
@@ -158,7 +156,7 @@ def train():
     iters_per_epoch = int(len(train_dataset) / args.batch_size)
 
     # start training
-    for epoch in range(args.start_epoch, args.max_epochs+1):
+    for epoch in range(args.start_epoch, args.max_epochs + 1):
         loss_temp = 0
         tic = time.time()
         train_data_iter = iter(train_dataloader)
@@ -190,8 +188,7 @@ def train():
 
             box_loss, iou_loss, class_loss = model(im_data_variable, boxes, gt_classes, num_obj, training=True)
 
-            loss = box_loss.mean()+ iou_loss.mean() \
-                   + class_loss.mean()
+            loss = box_loss.mean() + iou_loss.mean() + class_loss.mean()
 
             optimizer.zero_grad()
 
@@ -209,12 +206,11 @@ def train():
                 class_loss_v = class_loss.mean().item()
 
                 print("[epoch %2d][step %4d/%4d] loss: %.4f, lr: %.2e, time cost %.1fs" \
-                      % (epoch, step+1, iters_per_epoch, loss_temp, lr, toc - tic))
+                      % (epoch, step + 1, iters_per_epoch, loss_temp, lr, toc - tic))
                 print("\t\t\tiou_loss: %.4f, box_loss: %.4f, cls_loss: %.4f" \
                       % (iou_loss_v, box_loss_v, class_loss_v))
 
                 if args.use_tfboard:
-
                     n_iter = (epoch - 1) * iters_per_epoch + step + 1
                     writer.add_scalar('losses/loss', loss_temp, n_iter)
                     writer.add_scalar('losses/iou_loss', iou_loss_v, n_iter)
@@ -230,16 +226,8 @@ def train():
                 'model': model.module.state_dict() if args.mGPUs else model.state_dict(),
                 'epoch': epoch,
                 'lr': lr
-                }, save_name)
+            }, save_name)
+
 
 if __name__ == '__main__':
     train()
-
-
-
-
-
-
-
-
-

@@ -39,6 +39,7 @@ class RoiDataset(Dataset):
             im_data, boxes, gt_classes = augment_img(im_data, boxes, gt_classes)
 
             w, h = im_data.size[0], im_data.size[1]
+            # 计算相对于图像的坐标比例
             boxes[:, 0::2] = np.clip(boxes[:, 0::2] / w, 0.001, 0.999)
             boxes[:, 1::2] = np.clip(boxes[:, 1::2] / h, 0.001, 0.999)
 

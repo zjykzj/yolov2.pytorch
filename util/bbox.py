@@ -137,6 +137,11 @@ def box_transform_inv(box, deltas):
     """
     apply deltas to box to generate predicted boxes
 
+    b_x = σ(t_x) + c_x
+    b_y = σ(t_y) + c_y
+    b_w = p_w * e^t_w
+    b_H = p_h * e^t_h
+
     Arguments:
     box -- tensor of shape (N, 4), boxes, (c_x, c_y, w, h)
     deltas -- tensor of shape (N, 4), deltas, (σ(t_x), σ(t_y), exp(t_w), exp(t_h))
@@ -144,12 +149,13 @@ def box_transform_inv(box, deltas):
     Returns:
     pred_box -- tensor of shape (N, 4), predicted boxes, (c_x, c_y, w, h)
     """
-
+    # [H*W*Num_anchors] + [H*W*Num_anchors]
     c_x = box[:, 0] + deltas[:, 0]
     c_y = box[:, 1] + deltas[:, 1]
     w = box[:, 2] * deltas[:, 2]
     h = box[:, 3] * deltas[:, 3]
 
+    # [H*W*Num_anchors] -> [H*W*Num_anchors, 1]
     c_x = c_x.view(-1, 1)
     c_y = c_y.view(-1, 1)
     w = w.view(-1, 1)
