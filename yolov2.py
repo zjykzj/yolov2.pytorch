@@ -99,6 +99,7 @@ class Yolov2(nn.Module):
         # activate the output tensor
         # `sigmoid` for t_x, t_y, t_c; `exp` for t_h, t_w;
         # `softmax` for (class1_score, class2_score, ...)
+        #
         # 结合预测框输出 / 锚点框坐标 和 网格坐标, 计算最终的预测框坐标
         # b_x = sigmoid(t_x) + c_x
         # b_y = sigmoid(t_y) + c_y
@@ -121,6 +122,12 @@ class Yolov2(nn.Module):
         delta_pred = torch.cat([xy_pred, hw_pred], dim=-1)
 
         if training:
+            """
+            训练阶段, 计算损失, 包括
+            1. 边界框损失, 每个标注框会找到一个对应的锚点框作为正样本进行损失计算
+            2. 置信度损失, 包含了负责预测标注框的锚点框对应的预测框置信度(趋近于1)以及不负责预测的锚点框对应的预测框置信度(趋近于0)
+            3. 分类损失, 负责预测标注框的锚点框对应的预测框的分类损失
+            """
             output_variable = (delta_pred, conf_pred, class_score)
             output_data = [v.data for v in output_variable]
             gt_data = (gt_boxes, gt_classes, num_boxes)
@@ -132,6 +139,9 @@ class Yolov2(nn.Module):
 
             return box_loss, iou_loss, class_loss
 
+        """
+        测试阶段, 直接返回处理后的预测框结果, 包含了每个网格的锚点框偏移坐标 / 置信度 / 分类结果
+        """
         return delta_pred, conf_pred, class_pred
 
 

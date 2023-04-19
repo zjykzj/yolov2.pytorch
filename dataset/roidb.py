@@ -30,6 +30,11 @@ class RoiDataset(Dataset):
         return im_data, boxes, gt_classes
 
     def __getitem__(self, i):
+        """
+        指定图像下标的图像数据
+        1. 在训练阶段, 返回预处理后的图像数据, 边界框数据(相对于图像宽高的比例), 边界框所属类别下标, 边界框数目
+        2. 在测试阶段, 返回预处理后的图像数据, 以及图像预处理前后的信息
+        """
         im_data, boxes, gt_classes = self.roi_at(i)
         # w, h
         im_info = torch.FloatTensor([im_data.size[0], im_data.size[1]])
@@ -78,6 +83,7 @@ def detection_collate(batch):
     """
     批数据整理, 当前每幅图像包含了不同数量的标注框数据. 重新整理数据, 保证输出数据中每幅图像拥有相同数目的标注框数据
     实现: 首先找出该批次图像中最多的标注框数目, 然后其他图像的标注框数据创建相同大小, 不存在的标注框数据置0
+
     Collate data of different batch, it is because the boxes and gt_classes have changeable length.
     This function will pad the boxes and gt_classes with zero.
 
