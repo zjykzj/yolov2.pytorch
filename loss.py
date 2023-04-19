@@ -266,6 +266,11 @@ def yolo_loss(output, target):
     conf_pred_batch = output[1]
     class_score_batch = output[2]
 
+    """
+    创建两个部分:
+    1. target: 真值标签, 负责计算损失. 
+    2. mask: 不是所有的数据都参与运算. 比如边界框预测仅计算负责标注框预测的锚点框对应的预测框损失
+    """
     iou_target = target[0]
     iou_mask = target[1]
     box_target = target[2]
@@ -297,6 +302,7 @@ def yolo_loss(output, target):
     class_loss = 1 / b * cfg.class_scale * F.cross_entropy(class_score_batch_keep, class_target_keep, reduction='sum')
 
     return box_loss, iou_loss, class_loss
+
 
 if __name__ == '__main__':
     grid_h = 13
